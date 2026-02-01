@@ -216,22 +216,36 @@ with tab1:
                     out.release()
 
                 # --- الخطوة السحرية: تحويل الفيديو ليكون متوافقاً مع المتصفح ---
+                # استبدل جزء التحويل في الكود بهذا الجزء المحسن
                 with st.spinner("🔄 Optimizing video for web display..."):
                     try:
-                        import moviepy.editor as moviepy
-                        clip = moviepy.VideoFileClip(temp_output)
-                        clip.write_videofile(final_output, codec="libx264", audio=False)
+                        # استيراد مرن للمكتبة
+                        try:
+                            import moviepy.editor as mp
+                        except ImportError:
+                            try:
+                                from moviepy.video.io.VideoFileClip import VideoFileClip
+                                # تعريف محاكي لـ editor لو لزم الأمر
+                            except ImportError:
+                                st.error("MoviePy is not installed correctly.")
+
+                        # تنفيذ عملية التحويل
+                        from moviepy.video.io.VideoFileClip import VideoFileClip
                         
-                        # عرض الفيديو مباشرة في ستريمليت
+                        clip = VideoFileClip(temp_output)
+                        clip.write_videofile(final_output, codec="libx264", audio=False)
+                        clip.close() # مهم جداً عشان يقفل الملف ويسمح لستريمليت بفتحه
+
                         st.success("✅ Detection Complete!")
-                        video_file = open(final_output, 'rb')
-                        video_bytes = video_file.read()
-                        st.video(video_bytes) # تشغيل الفيديو داخل الصفحة
+                        with open(final_output, 'rb') as video_file:
+                            st.video(video_file.read())
+                            
                     except Exception as e:
-                        st.error(f"Error displaying video: {e}")
-                        # حل احتياطي لو فشل التحويل
-                        st.warning("Trying to play raw output...")
-                        st.video(temp_output)
+                        st.error(f"Error during video conversion: {e}")
+                        # إذا فشل التحويل تماماً، اعرض الفيديو الخام كحل أخير
+                        st.warning("Playing raw output (might not work in all browsers)...")
+                        with open(temp_output, 'rb') as raw_v:
+                            st.video(raw_v.read())
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD

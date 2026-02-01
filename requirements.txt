@@ -3,4 +3,5 @@ ultralytics>=8.0.20
 opencv-python-headless
 numpy
 pandas
-moviepy
+moviepy==1.0.3
+proglog
