@@ -174,26 +174,28 @@ with tab1:
         uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
-            # ملفات مؤقتة للمدخلات والمخرجات
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
             input_path = tfile.name
             
-            # مسار الفيديو بعد معالجة OpenCV (خام)
             temp_output = os.path.join(tempfile.gettempdir(), "temp_raw.mp4")
-            # مسار الفيديو النهائي المتوافق مع المتصفح
             final_output = os.path.join(tempfile.gettempdir(), "final_web.mp4")
 
             if st.button("🎬 Start Processing & Auto-Play"):
-                with st.spinner("⏳ Analyzing video frames... please wait."):
+                with st.spinner("⏳ Analyzing video frames..."):
                     cap = cv2.VideoCapture(input_path)
+                    
+                    # --- استخراج الـ FPS الأصلي بدقة ---
+                    original_fps = cap.get(cv2.CAP_PROP_FPS)
+                    # تأمين في حالة فشل القراءة
+                    if original_fps <= 0 or original_fps > 120:
+                        original_fps = 25 
+                    
                     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    fps = int(cap.get(cv2.CAP_PROP_FPS))
                     
-                    # إنشاء الـ Video Writer
                     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                    out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
+                    out = cv2.VideoWriter(temp_output, fourcc, original_fps, (width, height))
 
                     progress_bar = st.progress(0)
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -203,49 +205,34 @@ with tab1:
                         ret, frame = cap.read()
                         if not ret: break
                         
-                        # التوقع والرسم
                         results = model.predict(frame, conf=conf_threshold, verbose=False)
                         res_plotted = results[0].plot()
                         
                         out.write(res_plotted)
                         
                         frame_count += 1
-                        progress_bar.progress(frame_count / total_frames)
+                        progress_bar.progress(frame_count / total_frames if total_frames > 0 else 0)
 
                     cap.release()
                     out.release()
 
-                # --- الخطوة السحرية: تحويل الفيديو ليكون متوافقاً مع المتصفح ---
-                # استبدل جزء التحويل في الكود بهذا الجزء المحسن
-                with st.spinner("🔄 Optimizing video for web display..."):
+                # --- مرحلة التحويل مع الالتزام بالـ FPS الأصلي ---
+                with st.spinner(f"🔄 Optimizing speed at {original_fps} FPS..."):
                     try:
-                        # استيراد مرن للمكتبة
-                        try:
-                            import moviepy.editor as mp
-                        except ImportError:
-                            try:
-                                from moviepy.video.io.VideoFileClip import VideoFileClip
-                                # تعريف محاكي لـ editor لو لزم الأمر
-                            except ImportError:
-                                st.error("MoviePy is not installed correctly.")
-
-                        # تنفيذ عملية التحويل
                         from moviepy.video.io.VideoFileClip import VideoFileClip
                         
                         clip = VideoFileClip(temp_output)
-                        clip.write_videofile(final_output, codec="libx264", audio=False)
-                        clip.close() # مهم جداً عشان يقفل الملف ويسمح لستريمليت بفتحه
+                        # نمرر الـ fps هنا لضمان عدم تسريع الفيديو أثناء الضغط
+                        clip.write_videofile(final_output, codec="libx264", audio=False, fps=original_fps)
+                        clip.close()
 
-                        st.success("✅ Detection Complete!")
+                        st.success(f"✅ Detection Complete! (Speed: {original_fps} FPS)")
                         with open(final_output, 'rb') as video_file:
                             st.video(video_file.read())
                             
                     except Exception as e:
-                        st.error(f"Error during video conversion: {e}")
-                        # إذا فشل التحويل تماماً، اعرض الفيديو الخام كحل أخير
-                        st.warning("Playing raw output (might not work in all browsers)...")
-                        with open(temp_output, 'rb') as raw_v:
-                            st.video(raw_v.read())
+                        st.error(f"Error: {e}")
+                        st.video(temp_output)
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
