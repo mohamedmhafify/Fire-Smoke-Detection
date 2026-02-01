@@ -154,4 +154,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 👨‍💻 Author
 
-* **[Mohamed Mostafa Hassan Afify]** **[https://www.linkedin.com/in/mohamedmhafify]**
+* **[Mohamed Mostafa Hassan Afify]** 
+**[Linked In]**(https://www.linkedin.com/in/mohamedmhafify)
