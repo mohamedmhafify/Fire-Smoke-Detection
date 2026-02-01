@@ -171,59 +171,47 @@ with tab1:
                     )
 
     else:
-        uploaded_video = st.file_uploader(
-            "Upload Video", type=["mp4", "avi", "mov"]
-        )
+        uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
-            # 1. حفظ الفيديو مؤقتاً
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
             
-            # 2. تعريف حالة التشغيل في السيشون (Session State)
-            if 'run_video' not in st.session_state:
-                st.session_state.run_video = False
-
-            col_btn1, col_btn2 = st.columns([1, 5])
+            # زرار واحد للتشغيل
+            run_btn = st.button("🎬 Start Video Analysis")
             
-            with col_btn1:
-                if st.button("🎬 Start Analysis"):
-                    st.session_state.run_video = True
-            
-            with col_btn2:
-                if st.button("⏹ Stop Analysis"):
-                    st.session_state.run_video = False
-
-            # 3. تشغيل الـ Loop بناءً على حالة السيشون
-            if st.session_state.run_video:
-                st.info("⏱ Processing video frames...")
+            if run_btn:
                 cap = cv2.VideoCapture(tfile.name)
-                st_frame = st.empty()  # مكان عرض الفريمات
-
-                while cap.isOpened() and st.session_state.run_video:
+                # استخراج الـ FPS الأصلي للفيديو أو تعيين افتراضي
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                if fps == 0: fps = 24 
+                
+                st_frame = st.empty()  # مكان عرض الفيديو
+                
+                while cap.isOpened():
                     ret, frame = cap.read()
                     if not ret:
-                        st.session_state.run_video = False
                         break
 
-                    # Inference
-                    results = model.predict(
-                        frame, 
-                        conf=conf_threshold, 
-                        iou=iou_threshold, 
-                        verbose=False
-                    )
+                    # تقليل حجم الفريم لسرعة المعالجة على السيرفر
+                    frame = cv2.resize(frame, (640, 480))
 
-                    # الرسم والعرض
+                    # Inference
+                    results = model.predict(frame, conf=conf_threshold, iou=iou_threshold, verbose=False)
+                    
+                    # الرسم
                     res_plotted = results[0].plot()
                     frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
                     
-                    # أهم خطوة: تحديث الصورة في الـ placeholder
+                    # تحديث الصورة
                     st_frame.image(frame_rgb, use_container_width=True)
-
+                    
+                    # أهم سطر: إجبار السيرفر على التوقف لحظة لإرسال البيانات
+                    import time
+                    time.sleep(0.01) 
+                
                 cap.release()
-                if not st.session_state.run_video:
-                    st.write("Analysis Stopped.")
+                st.success("✅ Analysis Finished")
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
