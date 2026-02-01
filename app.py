@@ -179,16 +179,28 @@ with tab1:
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
 
-            if st.button("🎬 Start Video Analysis", type="primary"):
-                st.info("⏱ Processing video frames in real-time")
+            # إضافة زرار للإيقاف وزرار للبدء
+            col_btn1, col_btn2 = st.columns([1, 5])
+            with col_btn1:
+                start_btn = st.button("🎬 Start")
+            with col_btn2:
+                stop_btn = st.button("⏹ Stop")
+
+            if start_btn:
+                st.info("⏱ Processing video frames in real-time...")
                 cap = cv2.VideoCapture(tfile.name)
-                st_frame = st.empty()
+                st_frame = st.empty()  # مكان عرض الفيديو
 
                 while cap.isOpened():
+                    if stop_btn: # لو ضغطت Stop يقفل الـ Loop
+                        break
+                        
                     ret, frame = cap.read()
                     if not ret:
                         break
 
+                    # عمل التوقع (Prediction)
+                    # verbose=False عشان ما يملأش الـ Console رسائل ويبطئ التطبيق
                     results = model.predict(
                         frame,
                         conf=conf_threshold,
@@ -196,13 +208,14 @@ with tab1:
                         verbose=False
                     )
 
-                    frame_rgb = cv2.cvtColor(
-                        results[0].plot(),
-                        cv2.COLOR_BGR2RGB
-                    )
+                    # تحويل النتيجة لصورة ورسم المربعات
+                    # ملاحظة: plot() بترجع الصورة BGR فبنحولها RGB
+                    res_plotted = results[0].plot()
+                    frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
 
+                    # عرض الفريم المحدث في نفس المكان
                     st_frame.image(frame_rgb, use_container_width=True)
-
+                    
                 cap.release()
                 st.success("🎉 Video analysis finished")
 
