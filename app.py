@@ -176,48 +176,54 @@ with tab1:
         )
 
         if uploaded_video and model:
+            # 1. حفظ الفيديو مؤقتاً
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
+            
+            # 2. تعريف حالة التشغيل في السيشون (Session State)
+            if 'run_video' not in st.session_state:
+                st.session_state.run_video = False
 
-            # إضافة زرار للإيقاف وزرار للبدء
             col_btn1, col_btn2 = st.columns([1, 5])
+            
             with col_btn1:
-                start_btn = st.button("🎬 Start")
+                if st.button("🎬 Start Analysis"):
+                    st.session_state.run_video = True
+            
             with col_btn2:
-                stop_btn = st.button("⏹ Stop")
+                if st.button("⏹ Stop Analysis"):
+                    st.session_state.run_video = False
 
-            if start_btn:
-                st.info("⏱ Processing video frames in real-time...")
+            # 3. تشغيل الـ Loop بناءً على حالة السيشون
+            if st.session_state.run_video:
+                st.info("⏱ Processing video frames...")
                 cap = cv2.VideoCapture(tfile.name)
-                st_frame = st.empty()  # مكان عرض الفيديو
+                st_frame = st.empty()  # مكان عرض الفريمات
 
-                while cap.isOpened():
-                    if stop_btn: # لو ضغطت Stop يقفل الـ Loop
-                        break
-                        
+                while cap.isOpened() and st.session_state.run_video:
                     ret, frame = cap.read()
                     if not ret:
+                        st.session_state.run_video = False
                         break
 
-                    # عمل التوقع (Prediction)
-                    # verbose=False عشان ما يملأش الـ Console رسائل ويبطئ التطبيق
+                    # Inference
                     results = model.predict(
-                        frame,
-                        conf=conf_threshold,
-                        iou=iou_threshold,
+                        frame, 
+                        conf=conf_threshold, 
+                        iou=iou_threshold, 
                         verbose=False
                     )
 
-                    # تحويل النتيجة لصورة ورسم المربعات
-                    # ملاحظة: plot() بترجع الصورة BGR فبنحولها RGB
+                    # الرسم والعرض
                     res_plotted = results[0].plot()
                     frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
-
-                    # عرض الفريم المحدث في نفس المكان
-                    st_frame.image(frame_rgb, use_container_width=True)
                     
+                    # أهم خطوة: تحديث الصورة في الـ placeholder
+                    st_frame.image(frame_rgb, use_container_width=True)
+
                 cap.release()
-                st.success("🎉 Video analysis finished")
+                if not st.session_state.run_video:
+                    st.write("Analysis Stopped.")
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
