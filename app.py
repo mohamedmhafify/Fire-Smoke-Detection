@@ -174,39 +174,40 @@ with tab1:
         uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
-            # حفظ مؤقت
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
             
-            run_btn = st.button("🎬 Start Video Analysis")
-            
-            if run_btn:
+            if st.button("🎬 Start Fast Analysis"):
                 cap = cv2.VideoCapture(tfile.name)
-                
-                # نستخدم st.empty() واحدة خارج الـ Loop
-                st_frame = st.empty() 
-                
+                st_frame = st.empty()
+                frame_count = 0 # عداد الفريمات
+
                 while cap.isOpened():
                     ret, frame = cap.read()
                     if not ret:
                         break
 
-                    # --- الخطوة السحرية 1: تصغير الحجم جداً للسرعة ---
-                    # ده هيخلي المعالجة طيارة حتى لو السيرفر ضعيف
-                    frame = cv2.resize(frame, (480, 360))
+                    frame_count += 1
+                    # --- التعديل السحري: معالجة فريم كل 3 فريمات فقط ---
+                    if frame_count % 3 != 0:
+                        continue 
 
-                    # --- الخطوة 2: الـ Inference ---
-                    results = model.predict(frame, conf=conf_threshold, iou=iou_threshold, verbose=False)
+                    # تصغير الحجم للموديل وللعرض (بيسرع جداً)
+                    frame_resized = cv2.resize(frame, (480, 320))
+
+                    # Inference مع تحديد imgsz أصغر (320) للسرعة
+                    results = model.predict(
+                        frame_resized, 
+                        conf=conf_threshold, 
+                        iou=iou_threshold, 
+                        imgsz=320, # تصغير حجم المعالجة داخلياً
+                        verbose=False
+                    )
                     
-                    # --- الخطوة 3: الرسم ---
+                    # رسم النتائج وعرضها
                     res_plotted = results[0].plot()
-                    
-                    # تحويل من BGR لـ RGB (مهم جداً لـ Streamlit)
                     frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
-                    
-                    # --- الخطوة 4: التحديث القسري ---
-                    # استخدام clear_on_reun لو لزم الأمر (لكن st.image في empty كفاية)
-                    st_frame.image(frame_rgb, channels="RGB", use_container_width=True)
+                    st_frame.image(frame_rgb, use_container_width=True)
                     
                 cap.release()
                 st.success("✅ Analysis Finished")
