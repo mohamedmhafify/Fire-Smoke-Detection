@@ -171,74 +171,65 @@ with tab1:
                     )
 
     else:
-
-        uploaded_video = st.file_uploader(
-
-            "Upload Video", type=["mp4", "avi", "mov"]
-
-        )
-
-
+        uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
-
+            # 1. حفظ الفيديو المرفوع في ملف مؤقت
             tfile = tempfile.NamedTemporaryFile(delete=False)
-
             tfile.write(uploaded_video.read())
+            input_path = tfile.name
+            
+            # 2. إعداد مسار ملف المخرجات (Output Video)
+            output_path = os.path.join(tempfile.gettempdir(), "output_detected.mp4")
 
+            if st.button("🎬 Start Processing & Detect"):
+                with st.spinner("⏳ Analyzing video frames... Please wait."):
+                    cap = cv2.VideoCapture(input_path)
+                    
+                    # الحصول على مواصفات الفيديو الأصلي
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    fps = int(cap.get(cv2.CAP_PROP_FPS))
+                    
+                    # إعداد الـ Video Writer (استخدام H264 مهم جداً للعرض على الويب)
+                    # ملاحظة: 'avc1' أو 'mp4v' هما الأنسب
+                    fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+                    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
+                    # شريط تقدم (Progress Bar)
+                    progress_bar = st.progress(0)
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    frame_count = 0
 
-            if st.button("🎬 Start Video Analysis", type="primary"):
+                    while cap.isOpened():
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+                        
+                        # عمل الـ Prediction
+                        results = model.predict(frame, conf=conf_threshold, verbose=False)
+                        res_plotted = results[0].plot()
+                        
+                        # حفظ الفريم في الفيديو الجديد
+                        out.write(res_plotted)
+                        
+                        # تحديث شريط التقدم
+                        frame_count += 1
+                        progress_bar.progress(frame_count / total_frames)
 
-                st.info("⏱ Processing video frames in real-time")
-
-                cap = cv2.VideoCapture(tfile.name)
-
-                st_frame = st.empty()
-
-
-
-                while cap.isOpened():
-
-                    ret, frame = cap.read()
-
-                    if not ret:
-
-                        break
-
-
-
-                    results = model.predict(
-
-                        frame,
-
-                        conf=conf_threshold,
-
-                        iou=iou_threshold,
-
-                        verbose=False
-
-                    )
-
-
-
-                    frame_rgb = cv2.cvtColor(
-
-                        results[0].plot(),
-
-                        cv2.COLOR_BGR2RGB
-
-                    )
-
-
-
-                    st_frame.image(frame_rgb, use_container_width=True)
-
-
-
-                cap.release()
-
-                st.success("🎉 Video analysis finished")
+                    cap.release()
+                    out.release()
+                
+                st.success("✅ Analysis Complete!")
+                
+                # 3. عرض الفيديو النهائي بعد المعالجة
+                # بنحوله لـ bytes عشان Streamlit يعرضه صح
+                with open(output_path, 'rb') as v_file:
+                    video_bytes = v_file.read()
+                    st.video(video_bytes)
+                
+                # إضافة زرار للتحميل
+                st.download_button("📥 Download Annotated Video", data=video_bytes, file_name="fire_detection_result.mp4")
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
