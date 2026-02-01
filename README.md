@@ -122,7 +122,11 @@ The model was trained on a custom dataset specifically curated for fire and smok
 
 ## 📸 Screenshots
 
-> *Placeholder for screenshots of the Streamlit interface, detection results on images, and the performance dashboard.*
+!(assets/test.png)
+
+!(assets/results.png)
+
+!(assets/confusion_matrix.png)
 
 ---
 
@@ -155,4 +159,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 👨‍💻 Author
 
 * **Mohamed Mostafa Hassan Afify** 
-**🔗Linked In**: https://www.linkedin.com/in/mohamedmhafify
+* **🔗Linked In**: https://www.linkedin.com/in/mohamedmhafify
