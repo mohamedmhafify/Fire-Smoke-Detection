@@ -1,5 +1,7 @@
 # 🔥 Fire & Smoke Detection System
 
+![GIF](assets/test.gif)
+
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)
 ![YOLO](https://img.shields.io/badge/YOLO-Ultralytics-orange?style=for-the-badge&logo=yolo&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-green?style=for-the-badge&logo=opencv&logoColor=white)
@@ -123,7 +125,7 @@ The model was trained on a custom dataset specifically curated for fire and smok
 ## 📸 Screenshots
 
 ### Fire & Smoke Detection Output
-![Fire Detection](assets/test.png)
+![Fire Detection](assets/test.jpg)
 
 ### Detection Results Summary
 ![Results](assets/results.png)
