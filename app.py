@@ -174,42 +174,40 @@ with tab1:
         uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
+            # حفظ مؤقت
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
             
-            # زرار واحد للتشغيل
             run_btn = st.button("🎬 Start Video Analysis")
             
             if run_btn:
                 cap = cv2.VideoCapture(tfile.name)
-                # استخراج الـ FPS الأصلي للفيديو أو تعيين افتراضي
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                if fps == 0: fps = 24 
                 
-                st_frame = st.empty()  # مكان عرض الفيديو
+                # نستخدم st.empty() واحدة خارج الـ Loop
+                st_frame = st.empty() 
                 
                 while cap.isOpened():
                     ret, frame = cap.read()
                     if not ret:
                         break
 
-                    # تقليل حجم الفريم لسرعة المعالجة على السيرفر
-                    frame = cv2.resize(frame, (640, 480))
+                    # --- الخطوة السحرية 1: تصغير الحجم جداً للسرعة ---
+                    # ده هيخلي المعالجة طيارة حتى لو السيرفر ضعيف
+                    frame = cv2.resize(frame, (480, 360))
 
-                    # Inference
+                    # --- الخطوة 2: الـ Inference ---
                     results = model.predict(frame, conf=conf_threshold, iou=iou_threshold, verbose=False)
                     
-                    # الرسم
+                    # --- الخطوة 3: الرسم ---
                     res_plotted = results[0].plot()
+                    
+                    # تحويل من BGR لـ RGB (مهم جداً لـ Streamlit)
                     frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
                     
-                    # تحديث الصورة
-                    st_frame.image(frame_rgb, use_container_width=True)
+                    # --- الخطوة 4: التحديث القسري ---
+                    # استخدام clear_on_reun لو لزم الأمر (لكن st.image في empty كفاية)
+                    st_frame.image(frame_rgb, channels="RGB", use_container_width=True)
                     
-                    # أهم سطر: إجبار السيرفر على التوقف لحظة لإرسال البيانات
-                    import time
-                    time.sleep(0.01) 
-                
                 cap.release()
                 st.success("✅ Analysis Finished")
 
