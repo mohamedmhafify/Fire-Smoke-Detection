@@ -122,11 +122,14 @@ The model was trained on a custom dataset specifically curated for fire and smok
 
 ## 📸 Screenshots
 
-!(assets/test.png)
+### Fire & Smoke Detection Output
+![Fire Detection](assets/test.png)
 
-!(assets/results.png)
+### Detection Results Summary
+![Results](assets/results.png)
 
-!(assets/confusion_matrix.png)
+### Model Performance
+![Confusion Matrix](assets/confusion_matrix.png)
 
 ---
 
@@ -158,5 +161,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 👨‍💻 Author
 
-* **Mohamed Mostafa Hassan Afify** 
-* **🔗Linked In**: https://www.linkedin.com/in/mohamedmhafify
+**Mohamed Mostafa Hassan Afify**   
+🔗 [LinkedIn](https://www.linkedin.com/in/mohamedmhafify)
