@@ -174,62 +174,64 @@ with tab1:
         uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
 
         if uploaded_video and model:
-            # 1. حفظ الفيديو المرفوع في ملف مؤقت
+            # ملفات مؤقتة للمدخلات والمخرجات
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(uploaded_video.read())
             input_path = tfile.name
             
-            # 2. إعداد مسار ملف المخرجات (Output Video)
-            output_path = os.path.join(tempfile.gettempdir(), "output_detected.mp4")
+            # مسار الفيديو بعد معالجة OpenCV (خام)
+            temp_output = os.path.join(tempfile.gettempdir(), "temp_raw.mp4")
+            # مسار الفيديو النهائي المتوافق مع المتصفح
+            final_output = os.path.join(tempfile.gettempdir(), "final_web.mp4")
 
-            if st.button("🎬 Start Processing & Detect"):
-                with st.spinner("⏳ Analyzing video frames... Please wait."):
+            if st.button("🎬 Start Processing & Auto-Play"):
+                with st.spinner("⏳ Analyzing video frames... please wait."):
                     cap = cv2.VideoCapture(input_path)
-                    
-                    # الحصول على مواصفات الفيديو الأصلي
                     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                     fps = int(cap.get(cv2.CAP_PROP_FPS))
                     
-                    # إعداد الـ Video Writer (استخدام H264 مهم جداً للعرض على الويب)
-                    # ملاحظة: 'avc1' أو 'mp4v' هما الأنسب
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-                    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                    # إنشاء الـ Video Writer
+                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                    out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
 
-                    # شريط تقدم (Progress Bar)
                     progress_bar = st.progress(0)
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     frame_count = 0
 
                     while cap.isOpened():
                         ret, frame = cap.read()
-                        if not ret:
-                            break
+                        if not ret: break
                         
-                        # عمل الـ Prediction
+                        # التوقع والرسم
                         results = model.predict(frame, conf=conf_threshold, verbose=False)
                         res_plotted = results[0].plot()
                         
-                        # حفظ الفريم في الفيديو الجديد
                         out.write(res_plotted)
                         
-                        # تحديث شريط التقدم
                         frame_count += 1
                         progress_bar.progress(frame_count / total_frames)
 
                     cap.release()
                     out.release()
-                
-                st.success("✅ Analysis Complete!")
-                
-                # 3. عرض الفيديو النهائي بعد المعالجة
-                # بنحوله لـ bytes عشان Streamlit يعرضه صح
-                with open(output_path, 'rb') as v_file:
-                    video_bytes = v_file.read()
-                    st.video(video_bytes)
-                
-                # إضافة زرار للتحميل
-                st.download_button("📥 Download Annotated Video", data=video_bytes, file_name="fire_detection_result.mp4")
+
+                # --- الخطوة السحرية: تحويل الفيديو ليكون متوافقاً مع المتصفح ---
+                with st.spinner("🔄 Optimizing video for web display..."):
+                    try:
+                        import moviepy.editor as moviepy
+                        clip = moviepy.VideoFileClip(temp_output)
+                        clip.write_videofile(final_output, codec="libx264", audio=False)
+                        
+                        # عرض الفيديو مباشرة في ستريمليت
+                        st.success("✅ Detection Complete!")
+                        video_file = open(final_output, 'rb')
+                        video_bytes = video_file.read()
+                        st.video(video_bytes) # تشغيل الفيديو داخل الصفحة
+                    except Exception as e:
+                        st.error(f"Error displaying video: {e}")
+                        # حل احتياطي لو فشل التحويل
+                        st.warning("Trying to play raw output...")
+                        st.video(temp_output)
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
