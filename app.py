@@ -171,46 +171,74 @@ with tab1:
                     )
 
     else:
-        uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
+
+        uploaded_video = st.file_uploader(
+
+            "Upload Video", type=["mp4", "avi", "mov"]
+
+        )
+
+
 
         if uploaded_video and model:
+
             tfile = tempfile.NamedTemporaryFile(delete=False)
+
             tfile.write(uploaded_video.read())
-            
-            if st.button("🎬 Start Fast Analysis"):
+
+
+
+            if st.button("🎬 Start Video Analysis", type="primary"):
+
+                st.info("⏱ Processing video frames in real-time")
+
                 cap = cv2.VideoCapture(tfile.name)
+
                 st_frame = st.empty()
-                frame_count = 0 # عداد الفريمات
+
+
 
                 while cap.isOpened():
+
                     ret, frame = cap.read()
+
                     if not ret:
+
                         break
 
-                    frame_count += 1
-                    # --- التعديل السحري: معالجة فريم كل 3 فريمات فقط ---
-                    if frame_count % 3 != 0:
-                        continue 
 
-                    # تصغير الحجم للموديل وللعرض (بيسرع جداً)
-                    frame_resized = cv2.resize(frame, (480, 320))
 
-                    # Inference مع تحديد imgsz أصغر (320) للسرعة
                     results = model.predict(
-                        frame_resized, 
-                        conf=conf_threshold, 
-                        iou=iou_threshold, 
-                        imgsz=320, # تصغير حجم المعالجة داخلياً
+
+                        frame,
+
+                        conf=conf_threshold,
+
+                        iou=iou_threshold,
+
                         verbose=False
+
                     )
-                    
-                    # رسم النتائج وعرضها
-                    res_plotted = results[0].plot()
-                    frame_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
+
+
+
+                    frame_rgb = cv2.cvtColor(
+
+                        results[0].plot(),
+
+                        cv2.COLOR_BGR2RGB
+
+                    )
+
+
+
                     st_frame.image(frame_rgb, use_container_width=True)
-                    
+
+
+
                 cap.release()
-                st.success("✅ Analysis Finished")
+
+                st.success("🎉 Video analysis finished")
 
 # =====================================================
 # TAB 2 — PERFORMANCE DASHBOARD
